@@ -34,6 +34,5 @@ yourself), just comment out the following lines in the `Vagrantfile`:
 
 ## Cleaning up
 
-When tearing down the machine, the kubeconfig and token files that was download
-does not get deleted unfortunately. To not cause problems the next time you
-start, just run `rm ansible/k3s-kubeconfig ansible/k3s-token` and all is well.
+The VMs can be torn down after playing around using `vagrant destroy`. This will
+also remove the kubeconfig file `ansible/k3s-kubeconfig`.
