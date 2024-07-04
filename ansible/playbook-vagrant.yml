@@ -5,3 +5,6 @@
 
 - name: 'Run playbook-apacheds_installation.yml'
   ansible.builtin.import_playbook: playbook-apacheds_installation.yml
+
+- name: 'Run playbook-zitadel_installation.yml'
+  ansible.builtin.import_playbook: playbook-zitadel_installation.yml
