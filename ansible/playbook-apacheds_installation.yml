@@ -1,0 +1,89 @@
+---
+- name: 'Install ApacheDS'
+  hosts: 'k3s1'
+  gather_facts: false
+  become: false
+  module_defaults:
+    kubernetes.core.k8s:
+      kubeconfig: './k3s-kubeconfig'
+    kubernetes.core.k8s_info:
+      kubeconfig: './k3s-kubeconfig'
+    kubernetes.core.helm:
+      kubeconfig: './k3s-kubeconfig'
+
+  tasks:
+
+    - name: 'Create the apacheds namespace'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s:
+        name: 'apacheds'
+        api_version: 'v1'
+        kind: 'Namespace'
+        state: 'present'
+
+    - name: 'Create the apacheds configuration secret'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s:
+        state: 'present'
+        definition:
+          metadata:
+            name: apacheds-configuration
+            namespace: apacheds
+          kind: Secret
+          api_version: 'v1'
+          stringData:
+            APACHEDS_ROOT_PASSWORD: b1s
+            DN: DC=apacheds,DC=ojkastl,DC=de
+            OBJECT_CLASS: domain
+
+    - name: 'Create the apacheds ldifimport secret'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s:
+        state: 'present'
+        src: ./ApacheDS/secret-apacheds-ldif.yml
+
+    - name: 'Install the apacheds helm chart'
+      delegate_to: 'localhost'
+      kubernetes.core.helm:
+        name: 'apacheds'
+        chart_ref: 'apacheds'
+        chart_repo_url: 'https://johanneskastl.github.io/helm-charts/'
+        release_namespace: 'apacheds'
+        release_values:
+          persistence:
+            data:
+              size: 1Gi
+            ldifimport:
+              enabled: true
+              name: apacheds-ldif
+          service:
+            main:
+              type: ClusterIP
+
+    - name: 'Wait until the apacheds-0 pod is running (but might not be healthy yet)'
+      delegate_to: localhost
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: apacheds
+      register: pod_list
+      until: |
+        pod_list | json_query("resources[*].status.phase") | unique | sort == ["Running"]
+        or
+        pod_list | json_query("resources[*].status.phase") | unique | sort == ["Running", "Succeeded"]
+      retries: 12
+      delay: 10
+
+    - name: 'Wait until the apacheds-0 pod is ready'
+      delegate_to: localhost
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: apacheds
+      register: pod_list
+      until:
+        '
+        pod_list | json_query("resources[0].status.containerStatuses[*].ready") == [true]
+        '
+      retries: 30 # yes, really that long...
+      delay: 10
