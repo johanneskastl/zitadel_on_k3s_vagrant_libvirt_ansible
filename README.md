@@ -1,4 +1,4 @@
-# authentik_on_k3s_vagrant_libvirt_ansible
+# zitadel_on_k3s_vagrant_libvirt_ansible
 
 Vagrant-libvirt setup that creates a VM with k3s and installs
 [Authentik](https://goauthentik.io/) into the cluster.
