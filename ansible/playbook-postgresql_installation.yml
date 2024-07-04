@@ -1,0 +1,36 @@
+---
+
+- name: 'Install PostgreSQL'
+  hosts: 'k3s1'
+  gather_facts: true
+  become: false
+  module_defaults:
+    kubernetes.core.helm:
+      kubeconfig: './k3s-kubeconfig'
+    kubernetes.core.k8s:
+      kubeconfig: './k3s-kubeconfig'
+    kubernetes.core.k8s_info:
+      kubeconfig: './k3s-kubeconfig'
+
+  tasks:
+
+    - name: 'Create the postgresql namespace'
+      delegate_to: 'localhost'
+      kubernetes.core.k8s:
+        name: 'postgresql'
+        api_version: 'v1'
+        kind: 'Namespace'
+        state: 'present'
+
+    - name: 'Install PostgreSQL via the helm chart'
+      delegate_to: 'localhost'
+      kubernetes.core.helm:
+        chart_ref: oci://registry-1.docker.io/bitnamicharts/postgresql
+        release_name: db
+        release_namespace: postgresql
+        release_values:
+          auth:
+            postgresPassword: vagrant-libvirt
+          primary:
+            pgHbaConfiguration: |
+              host all all all trust
